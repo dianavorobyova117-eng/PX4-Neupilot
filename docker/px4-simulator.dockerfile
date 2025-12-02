@@ -7,7 +7,7 @@ FROM px4io/px4-dev-base-jammy:2024-05-18
 LABEL maintainer="Steven Cheng <zhenghw23@foxmail.com>"
 
 # Some QT-Apps/Gazebo don't not show controls without this
-ENV QT_X11_NO_MITSHM 1
+ENV QT_X11_NO_MITSHM=1
 
 # add proxy to avoid network issue when building docker image in China
 ENV http_proxy=http://127.0.0.1:7890 \
