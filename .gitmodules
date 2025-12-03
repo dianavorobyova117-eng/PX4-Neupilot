@@ -105,7 +105,7 @@
 	url = https://github.com/PX4/sbgECom.git
 [submodule "Micro-XRCE-DDS-Agent"]
 	path = Micro-XRCE-DDS-Agent
-	url = git@github.com:Arclunar/Micro-XRCE-DDS-Agent.git
+	url = https://github.com/Arclunar/Micro-XRCE-DDS-Agent.git
 [submodule "msg"]
 	path = msg
-	url = git@github.com:Arclunar/px4_msgs-msg.git
+	url = https://github.com/Arclunar/px4_msgs-msg.git
