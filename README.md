@@ -11,22 +11,15 @@
 
 *A neural control-enhanced PX4 autopilot system with integrated Gazebo Harmonic simulation*
 
-[Features](#-features) • [Quick Start](#-quick-start) • [Development](#-development-guide) • [Documentation](#-documentation)
+[Quick Start](#-quick-start) • [Development](#-development-guide) • [Documentation](#-documentation)
 
 ---
 
 </div>
 
-## ✨ Features
 
-- 🎯 **Neural Control Integration** - Enhanced PX4 with neural network capabilities
-- 🐳 **Docker Support** - Pre-configured development and production environments
-- 🎮 **Gazebo Harmonic** - Modern physics simulation with GPU acceleration
-- 🤖 **ROS 2 Humble** - Seamless integration with ROS 2 ecosystem
-- 🔧 **Hot Reload** - Development mode with live code updates
-- ⚡ **Just Commands** - Simplified workflow with `just` command runner
 
----
+
 
 ## 🚀 Quick Start
 
@@ -195,14 +188,7 @@ docker info | grep -i runtime
 - 🤖 [ROS 2 Humble Docs](https://docs.ros.org/en/humble/)
 - 🎮 [Gazebo Harmonic Docs](https://gazebosim.org/docs/harmonic)
 
----
 
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
----
----
 
 <div align="center">
 
