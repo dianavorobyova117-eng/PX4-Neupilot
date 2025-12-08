@@ -1,0 +1,12 @@
+menuconfig MODULES_THRUST_ACC_CONTROL
+	bool "thrust_acc_control"
+	default n
+	---help---
+		Enable support for thrust_acc_control
+
+menuconfig USER_MC_RATE_CONTROL
+	bool "thrust_acc_control running as userspace module"
+	default n
+	depends on BOARD_PROTECTED && MODULES_THRUST_ACC_CONTROL
+	---help---
+		Put thrust_acc_control in userspace memory

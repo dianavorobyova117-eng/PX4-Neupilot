@@ -29,9 +29,11 @@ fw_rate_control start vtol
 fw_att_control start vtol
 fw_mode_manager start
 fw_lat_lon_control start vtol
-fw_autotune_attitude_control start vtol
+# fw_autotune_attitude_control start vtol
 
 # Start Land Detector
 # Multicopter for now until we have something for VTOL
 #
 land_detector start vtol
+thrust_acc_control start
+
