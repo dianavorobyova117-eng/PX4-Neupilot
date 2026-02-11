@@ -13,7 +13,18 @@ control_allocator start
 #
 # Start Multicopter Rate Controller.
 #
-mc_rate_control start
+# Module selection based on MC_MRC_MODE parameter:
+# 0 = Standard PID control (mc_rate_control + proper_acc_control for thrust MRAC)
+# 1 = MRAC adaptive control (mc_mrac_control for offboard, replaces proper_acc_control)
+#
+if param greater -s MC_MRC_MODE 0
+then
+	# MRAC mode - mc_mrac_control handles all modes (Position, Offboard, etc.)
+	mc_mrac_control start
+else
+	# PID mode - standard rate control
+	mc_rate_control start
+fi
 
 #
 # Start Multicopter Attitude Controller.
@@ -41,4 +52,10 @@ if param compare -s MC_NN_EN 1
 then
 	mc_nn_control start
 fi
-thrust_acc_control start
+
+# Start proper_acc_control only when MC_MRC_MODE=0 (PID mode)
+# When MC_MRC_MODE=1, mc_mrac_control completely replaces proper_acc_control
+if param compare MC_MRC_MODE 0
+then
+	proper_acc_control start
+fi

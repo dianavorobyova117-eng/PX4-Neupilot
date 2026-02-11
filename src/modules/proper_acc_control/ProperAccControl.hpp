@@ -32,7 +32,7 @@
  ****************************************************************************/
 
 #pragma once
-#include <lib/mathlib/math/filter/LowPassFilter2p.hpp>
+
 #include <lib/adv_control_lib/butterworth_filter.h>
 #include <lib/perf/perf_counter.h>
 #include <lib/systemlib/mavlink_log.h>
@@ -50,11 +50,12 @@
 #include <uORB/topics/vehicle_odometry.h>
 #include <uORB/topics/vehicle_rates_setpoint.h>
 #include <uORB/topics/vehicle_status.h>
-#include <uORB/topics/vehicle_thrust_acc_setpoint.h>
+#include <uORB/topics/vehicle_proper_acc_setpoint.h>
 #include <uORB/topics/vehicle_thrust_setpoint.h>
 
 #include <AttitudeControl.hpp>
 #include <lib/mathlib/math/filter/AlphaFilter.hpp>
+#include <lib/mathlib/math/filter/LowPassFilter2p.hpp>
 #include <lib/matrix/matrix/math.hpp>
 #include <lib/rate_control/rate_control.hpp>
 #include <px4_platform_common/px4_work_queue/ScheduledWorkItem.hpp>
@@ -62,15 +63,14 @@
 #include <uORB/PublicationMulti.hpp>
 #include <uORB/Subscription.hpp>
 #include <uORB/SubscriptionCallback.hpp>
-// #include <uORB/topics/vehilce_thrust_acc_setpoint.h>
 using namespace time_literals;
 
-class ThrustAccControl : public ModuleBase<ThrustAccControl>,
+class ProperAccControl : public ModuleBase<ProperAccControl>,
                          public ModuleParams,
                          public px4::WorkItem {
  public:
-  ThrustAccControl();
-  ~ThrustAccControl() override;
+  ProperAccControl();
+  ~ProperAccControl() override;
 
   /** @see ModuleBase */
   static int task_spawn(int argc, char *argv[]);
@@ -98,8 +98,8 @@ class ThrustAccControl : public ModuleBase<ThrustAccControl>,
       this, ORB_ID(vehicle_angular_velocity)};
   vehicle_angular_velocity_s _ang_vel;
 
-  uORB::SubscriptionData<vehicle_thrust_acc_setpoint_s>
-      _vehicle_thrust_acc_setpoint_sub{ORB_ID(vehicle_thrust_acc_setpoint)};
+  uORB::SubscriptionData<vehicle_proper_acc_setpoint_s>
+      _vehicle_proper_acc_setpoint_sub{ORB_ID(vehicle_proper_acc_setpoint)};
   uORB::Subscription _vehicle_status_sub{ORB_ID(vehicle_status)};
   uORB::Subscription _vehicle_control_mode_sub{ORB_ID(vehicle_control_mode)};
 
@@ -124,23 +124,23 @@ class ThrustAccControl : public ModuleBase<ThrustAccControl>,
   float thrust_sp;
 
   hrt_abstime _last_run{0};
+  hrt_abstime _timestamp_prev{0};
 
   perf_counter_t _loop_perf; /**< loop duration performance counter */
 
   // keep setpoint values between updates
   matrix::Vector3f _rates_setpoint{};
-  vehicle_thrust_acc_setpoint_s _thrust_acc_setpoint_msg;
-  math::LowPassFilter2p<float> _thrust_sp_lpf{};
+  vehicle_proper_acc_setpoint_s _proper_acc_setpoint_msg;
+  math::LowPassFilter2p<float> _proper_sp_lpf{};
   float _u_prev = 0.0;
   float _u = 0.0;
   float _a_curr;
-  float _thrust_acc_sp{};
+  float _proper_acc_sp{};
   matrix::Quaternionf _rotate_q{};
-  float _thr_p;
   float _beta;
-  float _thr_model_ff;
-  // we assumes the model of thrust is quadratic, i.e. a_t = a*u
-  float _delta_thr_bound;
+  float _proper_model_ff;
+  // we assumes the model of proper acceleration is quadratic, i.e. a_t = a*u
+  float _delta_acc_bound;
 
   float _timeout_acc = 9.81;
   uint64_t _timeout_time = 2;
@@ -156,11 +156,30 @@ class ThrustAccControl : public ModuleBase<ThrustAccControl>,
   float _pitch_torque_k;
   float _pitch_torque_bd;
 
+  // ============================================================
+  // MRAC (Model Reference Adaptive Control) State Variables
+  // ============================================================
+
+  // Reference model state (ideal acceleration trajectory)
+  float _mrac_ref_state{0.0f};
+
+  // Adaptive parameter estimates (hat denotes estimate)
+  float _mrac_hat_kr{0.1f};  // Feedforward gain estimate
+  float _mrac_hat_kx{0.0f};  // Feedback gain estimate
+
+  // Filtered adaptive parameters (for smooth control output)
+  float _mrac_hat_kr_filtered{0.1f};
+  float _mrac_hat_kx_filtered{0.0f};
+
+  // Filtered acceleration measurement (for smooth control)
+  float _a_curr_filtered{0.0f};
+
   AlphaFilter<float> _rate_sft_filter;
   AlphaFilter<float> _acc_sft_filter;
   AttitudeControl _attitude_control;
   vehicle_rates_setpoint_s _vehicle_rates_setpoint{};
   DEFINE_PARAMETERS(
+      // === Existing parameters ===
       (ParamFloat<px4::params::MC_ROLL_P>)_param_mc_roll_p,
       (ParamFloat<px4::params::MC_PITCH_P>)_param_mc_pitch_p,
       (ParamFloat<px4::params::MC_YAW_P>)_param_mc_yaw_p,
@@ -172,15 +191,36 @@ class ThrustAccControl : public ModuleBase<ThrustAccControl>,
       (ParamFloat<px4::params::PITCH_TOR_K>)_param_pitch_torque_k,
       (ParamFloat<px4::params::PITCH_TOR_BD>)_param_pitch_torque_bd,
 
-      (ParamFloat<px4::params::THR_P>)_param_thr_p,
-      (ParamFloat<px4::params::THR_TMO_ACC>)_param_thr_timeout_acc,
-      (ParamFloat<px4::params::IMU_GYRO_CUTOFF>)_param_imu_gyro_cutoff,
+      // === MRAC Parameters ===
+      // Reference model parameters
+      (ParamFloat<px4::params::PACC_MRAC_RM_AM>)_mrac_ref_model_am,
+      (ParamFloat<px4::params::PACC_MRAC_RM_BM>)_mrac_ref_model_bm,
+
+      // Adaptation gains (learning rates)
+      (ParamFloat<px4::params::PACC_MRAC_G_KR>)_mrac_gamma_kr,
+      (ParamFloat<px4::params::PACC_MRAC_G_KX>)_mrac_gamma_kx,
+
+      // Low-pass filter cutoff frequency
+      (ParamFloat<px4::params::PACC_MRAC_LPF>)_mrac_lpf_cutoff,
+
+      // Projection operator limits (safety bounds)
+      (ParamFloat<px4::params::PACC_MRAC_KR_MAX>)_mrac_kr_max,
+      (ParamFloat<px4::params::PACC_MRAC_KR_MIN>)_mrac_kr_min,
+      (ParamFloat<px4::params::PACC_MRAC_KX_MAX>)_mrac_kx_max,
+      (ParamFloat<px4::params::PACC_MRAC_KX_MIN>)_mrac_kx_min,
+
+      // Normalization factor
+      (ParamFloat<px4::params::PACC_MRAC_NORM>)_mrac_norm,
+
+      // === Existing proper acceleration control parameters ===
+      (ParamFloat<px4::params::PACC_TMO_ACC>)_param_acc_timeout_acc,
+      (ParamFloat<px4::params::GYROX_CUTOFF>)_param_imu_gyro_cutoff,
       (ParamInt<px4::params::IMU_GYRO_RATEMAX>)_param_imu_gyro_rate_max,
-      (ParamFloat<px4::params::THR_DELTA_BOUND>)_param_delta_thr_bound,
-      (ParamFloat<px4::params::THR_LPF_CUTOFF>)_param_thr_lpf_cutoff_frq,
-      (ParamFloat<px4::params::THR_BETA>)_param_beta,
-      (ParamFloat<px4::params::THR_SFT_ACC>)_param_thr_sft_acc,
-      (ParamFloat<px4::params::THR_SFT_RATE>)_param_thr_sft_rate,
-      (ParamBool<px4::params::THR_SIM>)_param_thr_sim,
-      (ParamInt<px4::params::THR_TMO_TIME>)_param_sys_timeout_time)
+      (ParamFloat<px4::params::PACC_DELTA_BOUND>)_param_delta_acc_bound,
+      (ParamFloat<px4::params::PACC_LPF_CUTOFF>)_param_acc_lpf_cutoff_frq,
+      (ParamFloat<px4::params::PACC_BETA>)_param_beta,
+      (ParamFloat<px4::params::PACC_SFT_ACC>)_param_acc_sft_acc,
+      (ParamFloat<px4::params::PACC_SFT_RATE>)_param_acc_sft_rate,
+      (ParamBool<px4::params::PACC_SIM>)_param_acc_sim,
+      (ParamInt<px4::params::PACC_TMO_TIME>)_param_sys_timeout_time)
 };

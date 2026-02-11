@@ -32,13 +32,13 @@
 ############################################################################
 
 px4_add_module(
-	MODULE modules__thrust_acc_control
-	MAIN thrust_acc_control
+	MODULE modules__proper_acc_control
+	MAIN proper_acc_control
 	COMPILE_FLAGS
 		${MAX_CUSTOM_OPT_LEVEL}
 	SRCS
-		ThrustAccControl.cpp
-		ThrustAccControl.hpp
+		ProperAccControl.cpp
+		ProperAccControl.hpp
 	DEPENDS
 		mathlib
 		px4_work_queue

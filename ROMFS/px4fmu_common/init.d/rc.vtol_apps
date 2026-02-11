@@ -14,7 +14,13 @@ airspeed_selector start
 
 vtol_att_control start
 
-mc_rate_control start vtol
+# MRAC mode selection for multicopter rate control
+if param greater -s MC_MRC_MODE 0
+then
+	mc_mrac_control start
+else
+	mc_rate_control start vtol
+fi
 mc_att_control start vtol
 flight_mode_manager start
 mc_pos_control start vtol
@@ -35,5 +41,11 @@ fw_lat_lon_control start vtol
 # Multicopter for now until we have something for VTOL
 #
 land_detector start vtol
-thrust_acc_control start
+
+# Start proper_acc_control only when MC_MRC_MODE=0 (PID mode)
+# When MC_MRC_MODE=1, mc_mrac_control completely replaces proper_acc_control
+if param compare MC_MRC_MODE 0
+then
+	proper_acc_control start
+fi
 

@@ -1,0 +1,12 @@
+menuconfig MODULES_MC_MRAC_CONTROL
+	bool "mc_mrac_control"
+	default n
+	---help---
+		Enable MRAC-based multicopter rate and thrust control
+
+menuconfig USER_MC_MRAC_CONTROL
+	bool "mc_mrac_control running as userspace module"
+	default n
+	depends on BOARD_PROTECTED && MODULES_MC_MRAC_CONTROL
+	---help---
+		Put mc_mrac_control in userspace memory

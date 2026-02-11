@@ -1,0 +1,12 @@
+menuconfig MODULES_PROPER_ACC_CONTROL
+	bool "proper_acc_control"
+	default n
+	---help---
+		Enable support for proper_acc_control
+
+menuconfig USER_MC_RATE_CONTROL
+	bool "proper_acc_control running as userspace module"
+	default n
+	depends on BOARD_PROTECTED && MODULES_PROPER_ACC_CONTROL
+	---help---
+		Put proper_acc_control in userspace memory

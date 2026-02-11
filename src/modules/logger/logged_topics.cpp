@@ -147,6 +147,7 @@ void LoggedTopics::add_default_topics()
 	add_topic("vehicle_local_position_setpoint", 100);
 	add_topic("vehicle_magnetometer", 200);
 	add_topic("vehicle_rates_setpoint", 20);
+	add_topic("mrac_diagnostics", 20);
 	add_topic("vehicle_roi", 1000);
 	add_topic("vehicle_status");
 	add_optional_topic("vtol_vehicle_status", 200);
@@ -278,7 +279,7 @@ void LoggedTopics::add_high_rate_topics()
 	add_topic("vehicle_attitude");
 	add_topic("vehicle_attitude_setpoint");
 	add_topic("vehicle_rates_setpoint");
-	add_topic("vehicle_thrust_acc_setpoint");
+	add_topic("vehicle_proper_acc_setpoint");
 
 	add_topic("esc_status", 5);
 	add_topic("actuator_motors");
